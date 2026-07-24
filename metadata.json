@@ -1,0 +1,6 @@
+{
+  "name": "우리아이 먹잠타이머",
+  "description": "영유아 케어 트래킹 앱 - 수유, 수면, 대소변, 울음 원인 예측 및 2주 리포트",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
