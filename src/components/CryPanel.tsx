@@ -157,6 +157,8 @@ export const CryPanel: React.FC<CryPanelProps> = ({
                 { key: 'burp', label: '트림 시도 완료' },
                 { key: 'temp', label: '실내 온습도 쾌적' },
                 { key: 'hug', label: '안아주기 시도함' },
+                { key: 'checked_temp', label: '체온 측정함 (정상)' },
+                { key: 'gas_massage', label: '배 마사지 시도함' },
               ].map((chk) => (
                 <button
                   key={chk.key}

@@ -75,7 +75,7 @@ export const Header: React.FC<HeaderProps> = ({
                   className="w-10 h-10 rounded-full object-contain bg-rose-50 border-2 border-rose-200 shadow-xs p-0.5"
                 />
                 <span className="absolute -bottom-0.5 -right-0.5 text-xs">
-                  {activeBaby.gender === 'female' ? '👧' : '👦'}
+                  {activeBaby.gender === 'female' ? '💖' : '🧸'}
                 </span>
               </div>
               <div>

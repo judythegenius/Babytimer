@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Baby, AppSettings, FeedingMode, BabyGender } from '../types';
+import { Baby, AppSettings } from '../types';
 import { triggerHaptic, saveBabies, saveAppSettings } from '../utils';
-import { DEFAULT_BABY_AVATAR, PRESET_AVATARS } from '../data/avatars';
-import { X, Save, Download, Plus, Upload, Image as ImageIcon } from 'lucide-react';
+import { DEFAULT_BABY_AVATAR } from '../data/avatars';
+import { X, Save, Plus, Upload } from 'lucide-react';
 
 interface SettingsModalProps {
   babies: Baby[];
@@ -69,56 +69,67 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     onClose();
   };
 
-  const handleExportData = () => {
-    triggerHaptic();
-    const exportObj = {
-      babies: localBabies,
-      settings: localSettings,
-      logs: JSON.parse(localStorage.getItem('baby_timer_logs_v2') || '[]'),
-    };
+  // 생년월일 기반 추천 캐릭터 계산
+  const getRecommendedCharacters = () => {
+    const ageMonths = Math.floor(
+      (Date.now() - new Date(currentBaby.birthDate).getTime()) / (1000 * 60 * 60 * 24 * 30)
+    );
+    const stage =
+      ageMonths < 3 ? '신생아'
+      : ageMonths < 9 ? '6개월'
+      : ageMonths < 15 ? '1년'
+      : '1년6개월';
 
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportObj, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `baby_timer_backup_${new Date().toISOString().split('T')[0]}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+    const ageDays = Math.floor(
+      (Date.now() - new Date(currentBaby.birthDate).getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    return {
+      stage,
+      ageDays,
+      suggestions: [
+        { id: 'f', name: '여아', url: `/characters/${stage}-여자.png` },
+        { id: 'm', name: '남아', url: `/characters/${stage}-남자.png` },
+      ],
+    };
   };
 
+  const { stage, ageDays, suggestions } = getRecommendedCharacters();
+
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 font-sans text-slate-800">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 font-sans text-slate-800">
       <div className="bg-white w-full max-w-sm rounded-3xl p-5 space-y-5 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
+
+        {/* 헤더 */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <h3 className="font-bold text-base text-slate-900">앱 및 아기 정보 설정 ⚙️</h3>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"
+            className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Baby Info Form */}
+        {/* 아기 정보 */}
         <div className="space-y-3">
           <div className="text-xs font-bold text-slate-400">아기 세부 정보 수정</div>
 
-          {/* Baby Avatar / Character Selector & Upload */}
-          <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/80 space-y-2.5">
+          {/* 캐릭터 / 프로필 */}
+          <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/80 space-y-3">
             <label className="block text-xs font-bold text-slate-800">
               아기 캐릭터 / 프로필 사진
             </label>
-            
+
+            {/* 현재 아바타 + 업로드 버튼 */}
             <div className="flex items-center gap-3">
               <img
                 src={currentBaby.avatarUrl || DEFAULT_BABY_AVATAR}
                 alt={currentBaby.name}
-                referrerPolicy="no-referrer"
-                className="w-14 h-14 rounded-2xl object-cover border-2 border-rose-300 shadow-xs"
+                className="w-14 h-14 rounded-2xl object-cover border-2 border-rose-300 shadow-sm bg-blue-100"
               />
               <div className="flex-1 space-y-1.5">
-                <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-all shadow-xs">
+                <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 shadow-sm">
                   <Upload className="w-3.5 h-3.5 text-rose-300" />
                   <span>내 사진/캐릭터 업로드</span>
                   <input
@@ -129,16 +140,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   />
                 </label>
                 <p className="text-[10px] text-slate-400">
-                  원하는 사진이나 직접 만든 캐릭터 이미지를 업로드할 수 있어요.
+                  직접 만든 캐릭터나 사진을 업로드할 수 있어요.
                 </p>
               </div>
             </div>
 
-            {/* Presets */}
-            <div className="pt-1 border-t border-slate-200/60">
-              <div className="text-[10px] font-bold text-slate-500 mb-1.5">기본 추천 캐릭터 선택</div>
-              <div className="flex items-center gap-2">
-                {PRESET_AVATARS.map((preset) => {
+            {/* 생년월일 기반 추천 캐릭터 */}
+            <div className="border-t border-slate-200/60 pt-2.5 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-bold text-slate-500">
+                  개월 수 기반 추천 캐릭터
+                </div>
+                <div className="text-[10px] font-bold text-[#FF6B6B]">
+                  생후 {ageDays}일 ({stage})
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                {suggestions.map((preset) => {
                   const isSelected = currentBaby.avatarUrl === preset.url;
                   return (
                     <button
@@ -148,27 +167,41 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         triggerHaptic();
                         handleUpdateCurrentBaby({ avatarUrl: preset.url });
                       }}
-                      className={`relative rounded-xl overflow-hidden border-2 transition-all p-0.5 ${
-                        isSelected
-                          ? 'border-rose-500 ring-2 ring-rose-200 scale-105'
-                          : 'border-slate-200 hover:border-slate-300'
-                      }`}
+                      className="flex flex-col items-center gap-1"
                     >
-                      <img
-                        src={preset.url}
-                        alt={preset.name}
-                        referrerPolicy="no-referrer"
-                        className="w-10 h-10 rounded-lg object-cover"
-                      />
+                      <div className={`rounded-xl overflow-hidden border-2 p-0.5 transition-all ${
+                        isSelected
+                          ? 'border-[#FF6B6B] ring-2 ring-[#FF6B6B]/30 scale-105'
+                          : 'border-slate-200 hover:border-slate-300'
+                      }`}>
+                        <img
+                          src={preset.url}
+                          alt={preset.name}
+                          className="w-14 h-14 rounded-lg object-cover bg-blue-100"
+                        />
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-600">
+                        {preset.name}
+                      </span>
                     </button>
                   );
                 })}
+                <div className="flex flex-col justify-center text-[10px] text-slate-400 leading-relaxed pl-1">
+                  <span>생년월일 기준으로</span>
+                  <span>자동 추천돼요</span>
+                  <span className="text-[10px] text-slate-300 mt-1">
+                    생일 바꾸면 업데이트
+                  </span>
+                </div>
               </div>
             </div>
           </div>
 
+          {/* 이름 */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">아기 태명/이름</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              아기 태명/이름
+            </label>
             <input
               type="text"
               maxLength={6}
@@ -178,8 +211,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             />
           </div>
 
+          {/* 생년월일 */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">생년월일</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              생년월일
+            </label>
             <input
               type="date"
               value={currentBaby.birthDate}
@@ -188,35 +224,36 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             />
           </div>
 
+          {/* 성별 */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">성별</label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => handleUpdateCurrentBaby({ gender: 'female' })}
-                className={`py-2 text-xs font-bold rounded-xl border ${
+                className={`py-2 text-xs font-bold rounded-xl border transition-all ${
                   currentBaby.gender === 'female'
                     ? 'border-[#FF6B6B] bg-[#FF6B6B]/10 text-[#FF6B6B]'
                     : 'border-slate-200 text-slate-500'
                 }`}
               >
-                👧 여아
+                👧🏻 여아
               </button>
               <button
                 type="button"
                 onClick={() => handleUpdateCurrentBaby({ gender: 'male' })}
-                className={`py-2 text-xs font-bold rounded-xl border ${
+                className={`py-2 text-xs font-bold rounded-xl border transition-all ${
                   currentBaby.gender === 'male'
                     ? 'border-blue-500 bg-blue-50 text-blue-600'
                     : 'border-slate-200 text-slate-500'
                 }`}
               >
-                👦 남아
+                👶🏻 남아
               </button>
             </div>
           </div>
 
-          {/* Add Twin Button if single */}
+          {/* 쌍둥이 추가 */}
           {localBabies.length === 1 && (
             <button
               type="button"
@@ -229,14 +266,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           )}
         </div>
 
-        {/* Notifications & Quiet Hours */}
+        {/* 알림 설정 */}
         <div className="space-y-3 border-t border-slate-100 pt-3">
           <div className="text-xs font-bold text-slate-400">알림 설정</div>
 
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-xs font-bold text-slate-800">예측 수유/수면 알림</div>
-              <div className="text-[10px] text-slate-400">골든타임 도착 시 웹 푸시</div>
+              <div className="text-xs font-bold text-slate-800">수유/수면 예상 알림</div>
+              <div className="text-[10px] text-slate-400">골든타임 도착 시 푸시</div>
             </div>
             <button
               type="button"
@@ -247,7 +284,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 })
               }
               className={`w-11 h-6 rounded-full transition-colors p-0.5 flex items-center ${
-                localSettings.predictionAlert ? 'bg-[#FF6B6B] justify-end' : 'bg-slate-300 justify-start'
+                localSettings.predictionAlert
+                  ? 'bg-[#FF6B6B] justify-end'
+                  : 'bg-slate-300 justify-start'
               }`}
             >
               <div className="w-5 h-5 rounded-full bg-white shadow-md" />
@@ -257,25 +296,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs text-slate-600">
             🌙 <strong className="text-slate-800">야간 조용한 시간 (23:00 ~ 07:00)</strong>
             <p className="text-[10px] text-slate-400 mt-0.5">
-              야간 수면 시간 동안 기저귀 Remind 알림이 자동 차단됩니다.
+              야간에는 기저귀 알림이 자동으로 차단됩니다.
             </p>
           </div>
         </div>
 
-        {/* Backup / Export */}
-        <div className="space-y-2 border-t border-slate-100 pt-3">
-          <div className="text-xs font-bold text-slate-400">데이터 백업</div>
-          <button
-            type="button"
-            onClick={handleExportData}
-            className="w-full py-2.5 border border-slate-200 bg-white text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all flex items-center justify-center gap-1.5"
-          >
-            <Download className="w-4 h-4 text-slate-500" />
-            <span>기록 데이터 JSON 내보내기</span>
-          </button>
-        </div>
-
-        {/* Footer Actions */}
+        {/* 하단 버튼 */}
         <div className="flex gap-2 pt-2 border-t border-slate-100">
           <button
             type="button"
@@ -287,12 +313,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <button
             type="button"
             onClick={handleSaveAll}
-            className="flex-1 py-3 bg-[#FF6B6B] text-white rounded-xl font-bold text-xs hover:bg-[#FF5252] shadow-xs flex items-center justify-center gap-1"
+            className="flex-1 py-3 bg-[#FF6B6B] text-white rounded-xl font-bold text-xs hover:bg-[#FF5252] shadow-sm flex items-center justify-center gap-1"
           >
             <Save className="w-4 h-4" />
             <span>설정 저장</span>
           </button>
         </div>
+
       </div>
     </div>
   );

@@ -55,7 +55,7 @@ export const DiaperPanel: React.FC<DiaperPanelProps> = ({
       {/* Today Summary Banner */}
       <div className="bg-emerald-50/70 p-4 rounded-2xl border border-emerald-100/80 flex items-center justify-between">
         <div>
-          <div className="text-xs font-bold text-emerald-800">오늘 기저귀 현황 💧</div>
+          <div className="text-xs font-bold text-emerald-800">오늘 기저귀 현황 🐣</div>
           <div className="text-lg font-black text-emerald-950 mt-0.5">
             소변 <span className="text-[#34D399]">{peeCount}회</span> · 대변{' '}
             <span className="text-amber-600">{poopCount}회</span>
@@ -63,7 +63,7 @@ export const DiaperPanel: React.FC<DiaperPanelProps> = ({
         </div>
 
         <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-[#34D399] flex items-center justify-center font-bold text-xl">
-          💧
+          🧻
         </div>
       </div>
 

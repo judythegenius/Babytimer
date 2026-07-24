@@ -260,7 +260,7 @@ export default function App() {
                 : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            <Clock className="w-5 h-5" />
+            <img src="/icons/timer.png" alt="타이머" className="w-5 h-5 object-contain" />
             <span>타이머</span>
           </button>
 

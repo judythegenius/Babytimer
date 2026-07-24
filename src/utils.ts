@@ -312,6 +312,11 @@ export function calculatePrediction(
 }
 
 // --- CRY DIAGNOSIS ALGORITHM ---
+
+function isSleepRegressionAge(ageWeeks: number): boolean {
+  return (ageWeeks >= 14 && ageWeeks <= 20) || (ageWeeks >= 32 && ageWeeks <= 40);
+}
+
 export function diagnoseCryReasons(
   birthDateStr: string,
   babyLogs: ActivityLog[],
@@ -320,24 +325,23 @@ export function diagnoseCryReasons(
   const { feedIntervalMin, awakeWindowMin } = getRecommendedParameters(birthDateStr);
   const now = Date.now();
 
+  const birthMs = new Date(birthDateStr).getTime();
+  const ageWeeks = Math.floor((now - birthMs) / (1000 * 60 * 60 * 24 * 7));
+
   // 1. Last Feed
   const feedLogs = babyLogs.filter((l) =>
     ['breast', 'formula', 'weaning'].includes(l.type)
   );
-  feedLogs.sort(
-    (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
-  );
+  feedLogs.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
   const lastFeed = feedLogs[0];
   const minsSinceFeed = lastFeed
     ? Math.floor((now - new Date(lastFeed.startTime).getTime()) / (1000 * 60))
     : 999;
 
-  // 2. Last Wake / Sleep
+  // 2. Last Wake
   const finishedSleepLogs = babyLogs
     .filter((l) => l.type === 'sleep' && l.endTime)
-    .sort(
-      (a, b) => new Date(b.endTime!).getTime() - new Date(a.endTime!).getTime()
-    );
+    .sort((a, b) => new Date(b.endTime!).getTime() - new Date(a.endTime!).getTime());
   const lastWake = finishedSleepLogs[0];
   const awakeMins = lastWake
     ? Math.floor((now - new Date(lastWake.endTime!).getTime()) / (1000 * 60))
@@ -345,9 +349,7 @@ export function diagnoseCryReasons(
 
   // 3. Last Diaper
   const diaperLogs = babyLogs.filter((l) => l.type === 'diaper');
-  diaperLogs.sort(
-    (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
-  );
+  diaperLogs.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
   const lastDiaper = diaperLogs[0];
   const minsSinceDiaper = lastDiaper
     ? Math.floor((now - new Date(lastDiaper.startTime).getTime()) / (1000 * 60))
@@ -355,85 +357,112 @@ export function diagnoseCryReasons(
 
   const rawRanks: CryReasonRank[] = [];
 
-  // Reason 1: Hunger (배고픔)
+  // 1. 배고픔
   const hungerRatio = minsSinceFeed / feedIntervalMin;
-  const hungerConf =
-    hungerRatio >= 1.0 ? 'high' : hungerRatio >= 0.8 ? 'medium' : 'low';
   rawRanks.push({
     reason: 'hunger',
     reasonLabel: '🍼 배고픔일 가능성',
     elapsedMinutes: minsSinceFeed,
-    confidence: hungerConf,
-    description:
-      minsSinceFeed === 999
-        ? '수유 기록이 없어 배고플 수 있습니다.'
-        : `마지막 수유 후 ${formatMinutesToHoursMins(minsSinceFeed)} 경과`,
+    confidence: hungerRatio >= 1.0 ? 'high' : hungerRatio >= 0.8 ? 'medium' : 'low',
+    description: minsSinceFeed === 999
+      ? '수유 기록이 없어 배고플 수 있습니다.'
+      : `마지막 수유 후 ${formatMinutesToHoursMins(minsSinceFeed)} 경과`,
   });
 
-  // Reason 2: Sleepiness / Overtired (졸림)
+  // 2. 열/아픔 — 체온 미확인이면 medium으로 항상 노출
+  rawRanks.push({
+    reason: 'fever' as any,
+    reasonLabel: '🤒 열이나 통증',
+    elapsedMinutes: 0,
+    confidence: checklistCompleted.includes('checked_temp') ? 'low' : 'medium',
+    description: checklistCompleted.includes('checked_temp')
+      ? '체온 정상 확인됐네요. 다른 원인을 살펴보세요.'
+      : '체온을 측정해보세요. 38도 이상이면 소아과 방문을 권장해요.',
+  });
+
+  // 3. 배앓이/가스 — 수유 후 20~60분이 핵심 시간대
+  const gasConf = (minsSinceFeed >= 20 && minsSinceFeed <= 60) ? 'high'
+    : (minsSinceFeed > 0 && minsSinceFeed < 20) ? 'medium' : 'low';
+  rawRanks.push({
+    reason: 'gas' as any,
+    reasonLabel: '💨 배앓이 / 가스',
+    elapsedMinutes: minsSinceFeed,
+    confidence: checklistCompleted.includes('gas_massage') ? 'low' : gasConf,
+    description: checklistCompleted.includes('gas_massage')
+      ? '배 마사지 완료됐네요.'
+      : (minsSinceFeed >= 20 && minsSinceFeed <= 60)
+        ? `수유 후 ${minsSinceFeed}분 경과. 배앓이가 가장 심한 시간대예요.`
+        : '배에 가스가 차 있을 수 있어요. 배 마사지를 시도해보세요.',
+  });
+
+  // 4. 졸림
   const tiredRatio = awakeMins / awakeWindowMin;
-  const tiredConf =
-    tiredRatio >= 1.0 ? 'high' : tiredRatio >= 0.8 ? 'medium' : 'low';
   rawRanks.push({
     reason: 'tired',
     reasonLabel: '😴 졸릴 수 있음',
     elapsedMinutes: awakeMins,
-    confidence: tiredConf,
-    description:
-      awakeMins === 999
-        ? '깨어있는 시간이 늘어 졸릴 수 있습니다.'
-        : `기상 후 ${formatMinutesToHoursMins(awakeMins)} 경과 (권장: ${formatMinutesToHoursMins(awakeWindowMin)})`,
+    confidence: tiredRatio >= 1.0 ? 'high' : tiredRatio >= 0.8 ? 'medium' : 'low',
+    description: awakeMins === 999
+      ? '깨어있는 시간이 늘어 졸릴 수 있습니다.'
+      : `기상 후 ${formatMinutesToHoursMins(awakeMins)} 경과 (권장: ${formatMinutesToHoursMins(awakeWindowMin)})`,
   });
 
-  // Reason 3: Burp needed (트림)
+  // 5. 트림
   const isRecentFeed = minsSinceFeed <= 20;
   rawRanks.push({
     reason: 'burp',
     reasonLabel: '🫧 트림이 필요함',
     elapsedMinutes: minsSinceFeed,
-    confidence: isRecentFeed ? 'high' : 'low',
-    description: isRecentFeed
-      ? `수유 완료 ${minsSinceFeed}분 이내입니다. 속이 불편할 수 있습니다.`
-      : '수유 직후가 아니지만 배에 가스가 차있을 수 있습니다.',
+    confidence: checklistCompleted.includes('burp') ? 'low'
+      : isRecentFeed ? 'high' : 'low',
+    description: checklistCompleted.includes('burp')
+      ? '트림 완료됐네요. 다른 원인을 확인해보세요.'
+      : isRecentFeed
+        ? `수유 완료 ${minsSinceFeed}분 이내입니다. 속이 불편할 수 있습니다.`
+        : '수유 직후가 아니지만 배에 가스가 차있을 수 있습니다.',
   });
 
-  // Reason 4: Diaper (기저귀)
-  const diaperConf =
-    minsSinceDiaper >= 180 ? 'high' : minsSinceDiaper >= 120 ? 'medium' : 'low';
+  // 6. 기저귀
   rawRanks.push({
     reason: 'diaper',
     reasonLabel: '💧 기저귀 확인 필요',
     elapsedMinutes: minsSinceDiaper,
-    confidence: diaperConf,
-    description:
-      minsSinceDiaper === 999
+    confidence: checklistCompleted.includes('diaper') ? 'low'
+      : minsSinceDiaper >= 180 ? 'high'
+      : minsSinceDiaper >= 120 ? 'medium' : 'low',
+    description: checklistCompleted.includes('diaper')
+      ? '기저귀 이상 없음 확인됐네요.'
+      : minsSinceDiaper === 999
         ? '기저귀 교체 기록이 없습니다.'
         : `마지막 기저귀 교체 후 ${formatMinutesToHoursMins(minsSinceDiaper)} 경과`,
   });
 
-  // Reason 5: Other (불편함 / 환경)
+  // 7. 수면 퇴행 (해당 월령만 추가)
+  if (isSleepRegressionAge(ageWeeks)) {
+    rawRanks.push({
+      reason: 'sleep_regression' as any,
+      reasonLabel: '🌙 수면 퇴행 시기',
+      elapsedMinutes: 0,
+      confidence: 'medium',
+      description: `생후 ${ageWeeks}주는 수면 퇴행 시기예요. 평소보다 자주 깨는 게 정상이에요.`,
+    });
+  }
+
+  // 8. 온도/불편함
   rawRanks.push({
     reason: 'other',
     reasonLabel: '🌡️ 온도/불편함/자극',
     elapsedMinutes: 0,
-    confidence: 'medium',
-    description: '더위/추위, 꽉 끼는 옷, 자세 변경 또는 안아주기가 필요할 수 있습니다.',
+    confidence: (checklistCompleted.includes('temp') && checklistCompleted.includes('hug'))
+      ? 'low' : 'medium',
+    description: checklistCompleted.includes('temp')
+      ? '온습도는 쾌적한 상태네요. 옷이 불편하지 않은지 확인해보세요.'
+      : '더위/추위, 꽉 끼는 옷, 자세 변경 또는 안아주기가 필요할 수 있습니다.',
   });
 
-  // Sorting score
-  const scoreMap = { high: 3, medium: 2, low: 1 };
-  rawRanks.sort((a, b) => {
-    // If checklist item completed, demote that reason
-    let scoreA = scoreMap[a.confidence];
-    let scoreB = scoreMap[b.confidence];
-
-    if (a.reason === 'diaper' && checklistCompleted.includes('diaper')) scoreA -= 2;
-    if (b.reason === 'diaper' && checklistCompleted.includes('diaper')) scoreB -= 2;
-    if (a.reason === 'burp' && checklistCompleted.includes('burp')) scoreA -= 2;
-    if (b.reason === 'burp' && checklistCompleted.includes('burp')) scoreB -= 2;
-
-    return scoreB - scoreA;
-  });
+  // confidence 기준 정렬: high → medium → low
+  const scoreMap: Record<string, number> = { high: 3, medium: 2, low: 1 };
+  rawRanks.sort((a, b) => scoreMap[b.confidence] - scoreMap[a.confidence]);
 
   return {
     timestamp: new Date().toISOString(),

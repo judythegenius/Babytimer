@@ -49,24 +49,13 @@ export const GoldenTimeBanner: React.FC<GoldenTimeBannerProps> = ({
       {/* Top Banner Tagline */}
       <div className="flex items-center justify-between border-b border-slate-700/60 pb-2.5">
         <div className="flex items-center gap-1.5 text-xs font-bold text-coral-400">
-          <Sparkles className="w-3.5 h-3.5 text-[#FF6B6B]" />
-          <span className="text-slate-200">{babyName} 골든타임 리듬</span>
+          <span className="text-slate-200">💫 {babyName} 골든타임 리듬</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 text-[11px] text-slate-400 font-medium">
             <Clock className="w-3 h-3 text-slate-400" />
-            <span>실시간 예측</span>
+            <span> 실시간 예측</span>
           </div>
-          {characterImg && (
-            <img
-              src={characterImg}
-              alt={babyName}
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-              className="w-8 h-8 rounded-full object-contain bg-slate-800 border border-slate-600 p-0.5"
-            />
-          )}
         </div>
       </div>
 

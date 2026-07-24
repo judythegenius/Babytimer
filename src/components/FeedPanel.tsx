@@ -136,7 +136,7 @@ export const FeedPanel: React.FC<FeedPanelProps> = ({
           className="w-12 h-12 rounded-xl object-cover border border-rose-200/80 shadow-xs"
         />
         <div>
-          <div className="text-xs font-bold text-slate-800">맛있는 수유 타임 🍼</div>
+          <div className="text-xs font-bold text-slate-800">맛있는 수유 타임 ✨</div>
           <div className="text-[11px] text-slate-500">
             원터치로 간편하게 기록하고 수유 간격을 관리하세요.
           </div>
@@ -156,7 +156,7 @@ export const FeedPanel: React.FC<FeedPanelProps> = ({
               : 'text-slate-500 hover:text-slate-800'
           }`}
         >
-          🤱 모유 수유
+          👩🏻‍🍼 모유 수유
         </button>
         <button
           onClick={() => {
@@ -201,7 +201,7 @@ export const FeedPanel: React.FC<FeedPanelProps> = ({
                   : 'border-slate-200 bg-slate-50'
               }`}
             >
-              <div className="text-xs font-bold text-slate-500 mb-1">👈 왼쪽 가슴</div>
+              <div className="text-xs font-bold text-slate-500 mb-1">👈🏻 왼쪽</div>
               <div className="text-2xl font-black text-slate-900 tracking-tight my-1">
                 {formatDuration(leftSeconds)}
               </div>
@@ -236,7 +236,7 @@ export const FeedPanel: React.FC<FeedPanelProps> = ({
                   : 'border-slate-200 bg-slate-50'
               }`}
             >
-              <div className="text-xs font-bold text-slate-500 mb-1">오른쪽 가슴 👉</div>
+              <div className="text-xs font-bold text-slate-500 mb-1">오른쪽 👉🏻</div>
               <div className="text-2xl font-black text-slate-900 tracking-tight my-1">
                 {formatDuration(rightSeconds)}
               </div>
