@@ -43,7 +43,7 @@ export interface ActivityLog {
   isBackfilled?: boolean;
 }
 
-export type CryReason = 'hunger' | 'tired' | 'diaper' | 'burp' | 'other';
+export type CryReason = 'hunger' | 'tired' | 'diaper' | 'burp' | 'other' | 'fever' | 'gas' | 'sleep_regression';
 
 export interface CryReasonRank {
   reason: CryReason;

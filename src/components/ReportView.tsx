@@ -487,19 +487,37 @@ const maxWeeklyPoop = Math.max(1, ...dailyStats.map((d) => d.poopCnt));
               </h4>
               <span className="text-[10px] text-slate-400 font-semibold">목표: 5~8회</span>
             </div>
-            <div className="flex items-end justify-between gap-1 h-36 px-1 border-b border-slate-100">
-              {dailyStats.map((d) => {
-                const pct = d.feedCnt > 0 ? Math.max(12, Math.round((d.feedCnt / maxWeeklyFeed) * 100)) : 3;
-                return (
-                  <div key={d.dateStr} className="flex-1 flex flex-col items-center justify-end h-full gap-0.5">
-                    <span className="text-[9px] font-bold text-slate-600">{d.feedCnt > 0 ? `${d.feedCnt}` : ''}</span>
-                    <div className="w-full max-w-[18px] bg-[#FF6B6B] rounded-t-md" style={{ height: `${pct}%` }} />
-                    <span className="text-[9px] text-slate-400">{d.displayDay}</span>
+            {[0, 1].map((week) => {
+              const weekData = dailyStats.slice(week * 7, week * 7 + 7);
+              return (
+                <div key={week} className="space-y-1">
+                  <div className="text-[9px] text-slate-400 font-bold px-1">
+                    {week === 0 ? '1주차' : '2주차'}
                   </div>
-                );
-              })}
+                  <div className="flex items-end justify-between gap-1 px-1 border-b border-slate-100" style={{ height: '80px' }}>
+                    {weekData.map((d) => {
+                      const pct = d.feedCnt > 0
+                        ? Math.max(12, Math.round((d.feedCnt / maxWeeklyFeed) * 100))
+                        : 0;
+                      return (
+                        <div key={d.dateStr} className="flex-1 flex flex-col items-center justify-end h-full gap-0.5">
+                          <span className="text-[8px] font-bold text-slate-600">
+                            {d.feedCnt > 0 ? `${d.feedCnt}` : ''}
+                          </span>
+                          <div
+                            className="w-full max-w-[20px] bg-[#FF6B6B] rounded-t-md"
+                            style={{ height: `${pct}%` }}
+                          />
+                          <span className="text-[9px] text-slate-400">{d.displayDay}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
             </div>
-          </div>
+
 
           {/* 수면 시간 차트 */}
           <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm space-y-3">
@@ -514,19 +532,30 @@ const maxWeeklyPoop = Math.max(1, ...dailyStats.map((d) => d.poopCnt));
               </div>
             </div>
             <div className="flex items-end justify-between gap-1 h-36 px-1 border-b border-slate-100">
-                    {dailyStats.map((d) => {
-                  const napPct = d.napHours > 0
-                    ? Math.max(25, Math.round((d.napHours / maxNapHours) * 85))
-                    : 0;
-                  const nightPct = d.nightHours > 0
-                    ? Math.max(25, Math.round((d.nightHours / maxNightHours) * 85))
-                    : 0;
+              {dailyStats.map((d) => {
+                const MAX_HEIGHT = 80; // 픽셀 고정
+                const napH = d.napHours > 0
+                  ? Math.max(8, Math.round((d.napHours / maxNapHours) * MAX_HEIGHT))
+                  : 0;
+                const nightH = d.nightHours > 0
+                  ? Math.max(8, Math.round((d.nightHours / maxNightHours) * MAX_HEIGHT))
+                  : 0;
+                const totalSleep = d.napHours + d.nightHours;
+
                 return (
-                  <div key={d.dateStr} className="flex-1 flex flex-col items-center justify-end h-full gap-0.5">
-                    <span className="text-[8px] font-bold text-slate-600">{d.sleepHours > 0 ? `${d.sleepHours}h` : ''}</span>
-                    <div className="flex items-end gap-0.5 w-full justify-center">
-                      <div className="w-1/2 max-w-[9px] bg-[#A78BFA] rounded-t-sm" style={{ height: `${napPct}%` }} />
-                      <div className="w-1/2 max-w-[9px] bg-[#6D28D9] rounded-t-sm" style={{ height: `${nightPct}%` }} />
+                  <div key={d.dateStr} className="flex-1 flex flex-col items-center justify-end gap-0.5" style={{ height: '120px' }}>
+                    <span className="text-[8px] font-bold text-slate-600">
+                      {totalSleep > 0 ? `${totalSleep.toFixed(1)}h` : ''}
+                    </span>
+                    <div className="flex items-end gap-0.5 justify-center w-full">
+                      <div
+                        className="w-2 bg-[#A78BFA] rounded-t-sm"
+                        style={{ height: `${napH}px` }}
+                      />
+                      <div
+                        className="w-2 bg-[#6D28D9] rounded-t-sm"
+                        style={{ height: `${nightH}px` }}
+                      />
                     </div>
                     <span className="text-[9px] text-slate-400">{d.displayDay}</span>
                   </div>
@@ -548,28 +577,37 @@ const maxWeeklyPoop = Math.max(1, ...dailyStats.map((d) => d.poopCnt));
               </div>
             </div>
             <div className="flex items-end justify-between gap-1 h-36 px-1 border-b border-slate-100">
-              {dailyStats.map((d) => {
-                // 교체
-const peePct = d.peeCnt > 0
-  ? Math.max(25, Math.round((d.peeCnt / maxWeeklyPee) * 85))
-  : 0;
-const poopPct = d.poopCnt > 0
-  ? Math.max(25, Math.round((d.poopCnt / maxWeeklyPoop) * 85))
-  : 0;
-            return (
-                  <div key={d.dateStr} className="flex-1 flex flex-col items-center justify-end h-full gap-0.5">
-                    <span className="text-[8px] font-bold text-slate-600">{d.diaperCnt > 0 ? `${d.diaperCnt}` : ''}</span>
-                    <div className="flex items-end gap-0.5 w-full justify-center">
-                      <div className="w-1/2 max-w-[9px] bg-[#34D399] rounded-t-sm" style={{ height: `${peePct}%` }} />
-                      <div className="w-1/2 max-w-[9px] bg-[#F59E0B] rounded-t-sm" style={{ height: `${poopPct}%` }} />
-                    </div>
-                    <span className="text-[9px] text-slate-400">{d.displayDay}</span>
+            {dailyStats.map((d) => {
+              const MAX_HEIGHT = 80;
+              const peeH = d.peeCnt > 0
+                ? Math.max(8, Math.round((d.peeCnt / maxWeeklyPee) * MAX_HEIGHT))
+                : 0;
+              const poopH = d.poopCnt > 0
+                ? Math.max(8, Math.round((d.poopCnt / maxWeeklyPoop) * MAX_HEIGHT))
+                : 0;
+
+              return (
+                <div key={d.dateStr} className="flex-1 flex flex-col items-center justify-end gap-0.5" style={{ height: '120px' }}>
+                  <span className="text-[8px] font-bold text-slate-600">
+                    {d.diaperCnt > 0 ? `${d.diaperCnt}` : ''}
+                  </span>
+                  <div className="flex items-end gap-0.5 justify-center w-full">
+                    <div
+                      className="w-2 bg-[#34D399] rounded-t-sm"
+                      style={{ height: `${peeH}px` }}
+                    />
+                    <div
+                      className="w-2 bg-[#F59E0B] rounded-t-sm"
+                      style={{ height: `${poopH}px` }}
+                    />
                   </div>
-                );
-              })}
+                  <span className="text-[9px] text-slate-400">{d.displayDay}</span>
+                </div>
+              );
+            })}
             </div>
           </div>
-        </div>
+    </div>
       )}
 
       {showBackfillModal && (

@@ -371,7 +371,7 @@ export function diagnoseCryReasons(
 
   // 2. 열/아픔 — 체온 미확인이면 medium으로 항상 노출
   rawRanks.push({
-    reason: 'fever' as any,
+    reason: 'fever',
     reasonLabel: '🤒 열이나 통증',
     elapsedMinutes: 0,
     confidence: checklistCompleted.includes('checked_temp') ? 'low' : 'medium',
@@ -384,7 +384,7 @@ export function diagnoseCryReasons(
   const gasConf = (minsSinceFeed >= 20 && minsSinceFeed <= 60) ? 'high'
     : (minsSinceFeed > 0 && minsSinceFeed < 20) ? 'medium' : 'low';
   rawRanks.push({
-    reason: 'gas' as any,
+    reason: 'gas',
     reasonLabel: '💨 배앓이 / 가스',
     elapsedMinutes: minsSinceFeed,
     confidence: checklistCompleted.includes('gas_massage') ? 'low' : gasConf,
@@ -440,7 +440,7 @@ export function diagnoseCryReasons(
   // 7. 수면 퇴행 (해당 월령만 추가)
   if (isSleepRegressionAge(ageWeeks)) {
     rawRanks.push({
-      reason: 'sleep_regression' as any,
+      reason: 'sleep_regression' ,
       reasonLabel: '🌙 수면 퇴행 시기',
       elapsedMinutes: 0,
       confidence: 'medium',
