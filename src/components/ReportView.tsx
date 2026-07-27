@@ -604,6 +604,7 @@ const maxWeeklyPoop = Math.max(1, ...dailyStats.map((d) => d.poopCnt));
                 );
               })} 
               </div>
+              </div>
       )}
 
       {showBackfillModal && (
